@@ -6,12 +6,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-const string HealthServiceBusConnectionString = "Endpoint=sb://interview-payments-health.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key";
+const string ServiceBusConnectionString = "Endpoint=sb://interview-payments.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key";
+const string HealthServiceBusConnectionString = "Endpoint=sb://interview-payments-health-check.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key";
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton(new ServiceBusClient("Endpoint=sb://interview-payments.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key"));
-builder.Services.AddTransient<ServiceBusClient>(_ => new ServiceBusClient("Endpoint=sb://interview-payments-secondary.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key"));
+builder.Services.AddSingleton(new ServiceBusClient(ServiceBusConnectionString));
 
 builder.Services.AddSingleton<ITransactionStore, InMemoryTransactionStore>();
 builder.Services.AddSingleton<ITransactionProcessor, TransactionProcessor>();
@@ -20,6 +20,7 @@ builder.Services.AddTransient<IPaymentBusPublisher, PaymentBusPublisher>();
 builder.Services.AddScoped<IPaymentBusPublisher, PaymentBusPublisher>();
 builder.Services.AddTransient<IFraudScoreService, FraudScoreService>();
 builder.Services.AddSingleton<IFraudScoreService>(new FraudScoreService());
+builder.Services.AddTransient<ServiceBusClient>(_ => new ServiceBusClient(ServiceBusConnectionString));
 
 var bootstrapProvider = builder.Services.BuildServiceProvider();
 var bootstrapScope = bootstrapProvider.CreateScope();
@@ -28,7 +29,6 @@ var bootstrapPublisher = bootstrapProvider.GetRequiredService<IPaymentBusPublish
 
 builder.Services.AddSingleton<ITransactionProcessor>(_ => scopedProcessor);
 builder.Services.AddSingleton<IPaymentBusPublisher>(bootstrapPublisher);
-builder.Services.AddTransient<ServiceBusClient>(_ => new ServiceBusClient("Endpoint=sb://interview-payments-tertiary.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=dev-key"));
 builder.Services.AddTransient<ITransactionProcessor>(_ =>
     new TransactionProcessor(bootstrapProvider, bootstrapProvider.GetRequiredService<ITransactionStore>()));
 
